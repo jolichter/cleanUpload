@@ -1,14 +1,14 @@
 <?php
 /*
 * MODX Revo Plugin für den Datei Upload Manager
-* (getestet mit Revo 2.2.x bis 2.5.x)
+* (getestet mit Revo 2.2.6, 2.3.1, 2.5.5)
 *
 * Dateiname Transliteration und jpeg-Bildgröße Anpassung
 * (jpeg-Dateiinfos werden entfernt)
 *
 * System Events: OnFileManagerUpload!
 *
-* V 13.03.005
+* V 17.03.008
 *
 * Gleiche Dateinamen werden wie gehabt überschrieben!
 * Ein 'OnBeforeFileManagerUpload' gibt es leider (noch) nicht.
@@ -22,9 +22,9 @@
 
 
 # Parameter
-$maxWidth = 800;    // maximale Pixelbreite
-$maxHeight = 800;   // maximale Pixelhöhe
-$quality = 80;      // jpeg-Qualität
+$maxWidth = 960;    // maximale Pixelbreite
+$maxHeight = 960;   // maximale Pixelhöhe
+$quality = 80;       // jpeg-Qualität
 
 
 
@@ -48,7 +48,6 @@ if (!function_exists('cleanFilename')) {
    return $filename;
    }
 }
-
 
 
 // ###################################
@@ -128,12 +127,13 @@ foreach($files as $file) {
 
         $pathInfo = pathinfo($file['name']);
         $fileName = $pathInfo['filename'];
-        $fileExt = '.'.strtolower($pathInfo['extension']);
+        $fileExt = '.'.$pathInfo['extension'];
         $fullName = $fullPath.$fileName.$fileExt;
 
         $fileNameNew = cleanFilename($modx, $fileName, $slug);
+        $fileExt = strtolower($fileExt);
         $fullNameNew = $fullPath.$fileNameNew.$fileExt;
-        //$modx->log(modX::LOG_LEVEL_ERROR, '[cleanFilename] '.$fullNameNew);
+        //$modx->log(modX::LOG_LEVEL_ERROR, '[cleanFilename] '.$fullName.' <----> '.$fullNameNew);
 
 
         // Transliteration necessary?
@@ -157,4 +157,3 @@ foreach($files as $file) {
         }
     }
 }
- 
