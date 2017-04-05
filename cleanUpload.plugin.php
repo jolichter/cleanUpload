@@ -1,36 +1,34 @@
 <?php
 /*
-* MODX Revo Plugin für den Datei Upload Manager
-* (getestet mit Revo 2.2.6, 2.3.1, 2.5.6)
+* cleanUpload is a  MODX Revolution FileManager Plugin
+* (testet with MODX 2.3.1, 2.5.6)
 *
-* Dateiname Transliteration und JPG-Bildgröße Anpassung
-* (jpg-Dateiinfos werden entfernt)
+* file name transliteration and customizing the JPG image size
+* (JPG file infos will be removed)
 *
-* System Events: OnFileManagerUpload
+* two system events must be activated: OnFileManagerBeforeUpload, OnFileManagerUpload
 *
-* V 17.04.009
+* V 17.04.010
 *
-* gleiche Dateinamen werden überschrieben!
-* bei der Transliteration verhindere ich das, indem ich an der neuen Datei ein uniqid() anhänge
-* seit MODX 2.3 gibt es auch ein 'OnFileManagerBeforeUpload' Event (steht auf meine todo-List)
+* same file names are NOT overwritten!
+* instead of this, a uniqid ID is appended to these files
+* this works only at MODX 2.3 or higher!
 *
 *
 *
-* Quellen:
+* sources:
 * http://php.net/manual/de/function.image-type-to-extension.php
 * http://forums.modx.com/?action=thread&thread=73940&page=2
 */
-# Parameter
-$maxWidth = 960;    // maximale Pixelbreite
-$maxHeight = 960;   // maximale Pixelhöhe
-$quality = 80;      // jpeg-Qualität
+
+
+// Parameter
+$maxWidth = 960;     // maximale Pixelbreite
+$maxHeight = 960;    // maximale Pixelhöhe
+$quality = 80;       // jpeg-Qualität
 
 
 $eventName = $modx->event->name;
-if ($eventName != 'OnFileManagerUpload') {
-return;
-}
-
 
 // ###################################
 // cleaning filename function
@@ -90,12 +88,14 @@ if (!function_exists('imgResize')) {
     imagedestroy($gd_image);
     }
 }
+
 // ###################################
 // rename each of the uploaded Files and resize Images if necessary
 foreach($files as $file) {
     global $modx;
     if ($file['error'] == 0) {
         $slug = '_';
+        $dir = $directory;
         $fileDir = $directory.$file['name']; #directory/filename.ext
         //$modx->getOption('base_path') + path Media Sources + directory File:
         //modfilemediasource.class.php (function uploadObjectsToContainer)
@@ -103,37 +103,43 @@ foreach($files as $file) {
         $fullPath = $bases['pathAbsolute'].ltrim($directory, '/');
         $pathInfo = pathinfo($file['name']);
         $fileName = $pathInfo['filename'];
-        $fileExt = '.'.$pathInfo['extension'];
-        $fileExtL = strtolower($fileExt);
-        $fullName = $fullPath.$fileName.$fileExt;
         $fileNameNew = cleanFilename($modx, $fileName, $slug);
-        $fullNameNew = $fullPath.$fileNameNew.$fileExtL;
-        //$modx->log(modX::LOG_LEVEL_ERROR, '[cleanFilename] '.$fullName.' <----> '.$fullNameNew);
+        $fileExt = '.'.$pathInfo['extension'];
+        $fileExtLow = strtolower($fileExt);
+        $fullPathName = $fullPath.$fileName.$fileExt;
+        $fullNameNewLow = $fileNameNew.$fileExtLow;
+        $fullPathNameNew = $fullPath.$fileNameNew.$fileExtLow;
 
-        // Transliteration necessary?
-        if ($fileName != $fileNameNew) {
+//$modx->log(modX::LOG_LEVEL_ERROR, '[cleanFilename] '.fullPathNameNew.' <----> '.$fullNameNewLow);
+
+
+switch($eventName) {
+
+case 'OnFileManagerBeforeUpload':
             // if the file exist, add an unique-ID Number in file
-            if (file_exists($fullNameNew)) {
-            $uni = uniqid();
-            $fileNameNew = $fileNameNew.'_'.$uni;
-            $fullNameNew = $fullPath.$fileNameNew.$fileExtL;
+            if (file_exists($fullPathNameNew)) {
+               $uni = uniqid();
+               $fileTemp= $fileNameNew.'_'.$uni;
+               $fileTemp = $fileTemp.$fileExtLow;
+               $source->renameObject($dir.$fullNameNewLow, $fileTemp);
             }
-            $source->renameObject($fileDir, $fileNameNew.$fileExtL);
-        }
-        else {
-        if ($fileExt != $fileExtL) {
-            $uni = uniqid();
-            $fileNameNew = $fileNameNew.'_'.$uni;
-            $fullNameNew = $fullPath.$fileNameNew.$fileExtL;
-            $source->renameObject($fileDir, $fileNameNew.$fileExtL);
-        }
-        }
+break;
 
-        //$modx->log(modX::LOG_LEVEL_ERROR, '[cleanFilename] '.$fileDir.' - '.$fileNameNew.$fileExt);
+case 'OnFileManagerUpload':
+            // Transliteration necessary?
+            if ($fileName != $fileNameNew) {
+                $source->renameObject($fileDir, $fullNameNewLow);
+            }
+            else {
+            // or is only the extension to lower necessary?
+            if ($fileExt != $fileExtLow) {
+                $source->renameObject($fileDir, $fullNameNewLow);
+            }
+            }
+
         // if file is a jpg-image
-        if ($fileExtL == '.jpg' || $fileExtL == '.jpeg') {
-        imgResize($modx, $fullNameNew, $fullNameNew, $maxWidth, $maxHeight, $quality);
-        //$modx->log(modX::LOG_LEVEL_ERROR, '[cleanFilename] '.$fullNameNew);
+        if ($fileExtLow == '.jpg' || $fileExtLow == '.jpeg') {
+        imgResize($modx, $fullPathNameNew, $fullPathNameNew, $maxWidth, $maxHeight, $quality);
         }
-    }
-}
+break;
+} } }
