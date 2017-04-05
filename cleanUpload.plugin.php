@@ -11,7 +11,7 @@
 * V 17.04.010
 *
 * same file names are NOT overwritten!
-* instead of this, a uniqid ID is appended to these files
+* instead of this, an uniq ID is appended to these files
 * this works only at MODX 2.3 or higher!
 *
 *
