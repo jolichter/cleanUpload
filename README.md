@@ -1,16 +1,13 @@
-# cleanUpload
-- need MODX Revolution >= 2.3.0
-- cleanUpload is a Plugin-Snippet for the File Manager
+# cleanUpload is a MODX Revolution FileManager Plugin
+- testet with MODX 2.3.1, 2.5.6, 2.8.3 (PHP 7.4.x) and 3.0.0 (PHP 8.1.x)
 - two system events must be activated: OnFileManagerBeforeUpload, OnFileManagerUpload
 
 Features:
-- Characters in file names that are not available in the target character set, are replaced by similar characters (transliteration)
-- Zeichen im Dateinamen welche im Ziel-Zeichensatz nicht zur Verfügung stehen, werden durch ähnliche Zeichen ersetzt (Transliteration)
-- Optimizes the maximum size of jpeg-images by GD2
-- Optimiert die maximale Größe von jpeg-Bildern per GD2
-- Same file names are NOT overwritten -> instead of this, a uniq ID is appended to these files
-- Gleiche Dateinamen werden NICHT überschrieben -> stattdessen wird eine eindeutige ID angehangen
-
+- File name transliteration and customizing the JPG image size (JPG file info will be removed)
+- Same file names are NOT overwritten! Instead, a uniq ID is appended to these files.
+- Two system events need to be enabled: Two system events must be activated: OnFileManagerBeforeUpload, OnFileManagerUpload
+- Since MODX 3: Transliterate must be disabled in the settings for this (cleanUpload uses its own).
+- Transliterate names of uploaded files: No
 
 
 :-)
