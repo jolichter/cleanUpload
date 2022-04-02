@@ -1,31 +1,25 @@
-<?php
 /*
-* cleanUpload is a  MODX Revolution FileManager Plugin
-* (testet with MODX 2.3.1, 2.5.6)
+* V 22.04.011
 *
-* file name transliteration and customizing the JPG image size
-* (JPG file infos will be removed)
+* cleanUpload is a MODX Revolution FileManager Plugin
+* Testet with MODX 2.3.1, 2.5.6, 2.8.3 (PHP 7.4.x) and 3.0.0 (PHP 8.1.x)
 *
-* two system events must be activated: OnFileManagerBeforeUpload, OnFileManagerUpload
+* File name transliteration and customizing the JPG image size (JPG file info will be removed)
+* Same file names are NOT overwritten! Instead, a uniq ID is appended to these files.
+* Two system events need to be enabled: Two system events must be activated: OnFileManagerBeforeUpload, OnFileManagerUpload
 *
-* V 17.04.010
+* Since MODX 3: Transliterate must be disabled in the settings for this (cleanUpload uses its own).
+* Transliterate names of uploaded files: No
 *
-* same file names are NOT overwritten!
-* instead of this, an uniq ID is appended to these files
-* this works only at MODX 2.3 or higher!
-*
-*
-*
-* sources:
-* http://php.net/manual/de/function.image-type-to-extension.php
-* http://forums.modx.com/?action=thread&thread=73940&page=2
+* Sources:
+* https://www.php.net/manual/de/function.image-type-to-extension.php
+* https://forums.modx.com/?action=thread&thread=73940&page=2
 */
 
-
 // Parameter
-$maxWidth = 960;     // maximale Pixelbreite
-$maxHeight = 960;    // maximale Pixelhöhe
-$quality = 80;       // jpeg-Qualität
+$maxWidth = 1280;    // maximum pixel width | maximale Pixelbreite
+$maxHeight = 1280;   // Maximum pixel height | maximale Pixelhöhe
+$quality = 80;       // JPG quality in % (default 80) | JPG Qualität in % (Vorgabe 80)
 
 
 $eventName = $modx->event->name;
@@ -46,6 +40,8 @@ if (!function_exists('cleanFilename')) {
    return $filename;
    }
 }
+
+
 // ###################################
 // resize JPEG function
 if (!function_exists('imgResize')) {
@@ -53,6 +49,7 @@ if (!function_exists('imgResize')) {
     // check if GD extension is loaded
     if (!extension_loaded('gd') && !extension_loaded('gd2')) {return false;}
     list($source_width, $source_height, $source_type) = getimagesize($source);
+    $source_gd_image = '';
     switch ($source_type) {
         case IMAGETYPE_JPEG:
             $source_gd_image = imagecreatefromjpeg($source);
@@ -90,28 +87,24 @@ if (!function_exists('imgResize')) {
 }
 
 // ###################################
-// rename each of the uploaded Files and resize Images if necessary
+// resize Images if necessary
 foreach($files as $file) {
     global $modx;
     if ($file['error'] == 0) {
         $slug = '_';
         $dir = $directory;
-        $fileDir = $directory.$file['name']; #directory/filename.ext
-        //$modx->getOption('base_path') + path Media Sources + directory File:
-        //modfilemediasource.class.php (function uploadObjectsToContainer)
-        $bases = $source->getBases($directory);
-        $fullPath = $bases['pathAbsolute'].ltrim($directory, '/');
-        $pathInfo = pathinfo($file['name']);
-        $fileName = $pathInfo['filename'];
-        $fileNameNew = cleanFilename($modx, $fileName, $slug);
-        $fileExt = '.'.$pathInfo['extension'];
-        $fileExtLow = strtolower($fileExt);
-        $fullPathName = $fullPath.$fileName.$fileExt;
+        $fileDir = $directory.$file['name'];                                 # Directory + Filename.ext
+        $bases = $source->getBases($directory);                              # Array
+        $fullPath = $bases['pathAbsolute'].ltrim($directory, '/');           # pathAbsolute + Directory
+        $pathInfo = pathinfo($file['name']);                                 # Array
+        $fileName = $pathInfo['filename'];                                   # Filename without extension
+        $fileNameNew = cleanFilename($modx, $fileName, $slug);               # Function
+        $fileExt = '.'.$pathInfo['extension'];                               # File extension
+        $fileExtLow = strtolower($fileExt);                                  # File extension to low
         $fullNameNewLow = $fileNameNew.$fileExtLow;
         $fullPathNameNew = $fullPath.$fileNameNew.$fileExtLow;
 
-//$modx->log(modX::LOG_LEVEL_ERROR, '[cleanFilename] '.fullPathNameNew.' <----> '.$fullNameNewLow);
-
+        # $modx->log(modX::LOG_LEVEL_ERROR, '[cleanUpload] '.$fileName.' <----> '.$fileNameNew);
 
 switch($eventName) {
 
