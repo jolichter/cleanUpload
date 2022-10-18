@@ -1,16 +1,18 @@
 <?php
 /*
-* V 22.04.011
+* V 22.10.012
 *
 * cleanUpload is a MODX Revolution FileManager Plugin
-* Testet with MODX 2.3.1, 2.5.6, 2.8.3 (PHP 7.4.x) and 3.0.0 (PHP 8.1.x)
+* Testet with MODX 2.3.1, 2.5.6, 2.8.3 (PHP 7.4.x) and 3.0.1 (PHP 8.1.x)
 *
 * File name transliteration and customizing the JPG image size (JPG file info will be removed)
 * Same file names are NOT overwritten! Instead, a uniq ID is appended to these files.
 * Two system events need to be enabled: Two system events must be activated: OnFileManagerBeforeUpload, OnFileManagerUpload
 *
-* Since MODX 3: Transliterate must be disabled in the settings for this (cleanUpload uses its own).
-* Transliterate names of uploaded files: No
+* Since MODX 3: Transliterate (upload_translit) must be disabled in the settings for this (cleanUpload uses its own!).
+*  - Transliterate names of uploading files
+*  - Type: Yes/No (default: Yes)
+*  - if 'Yes' name of any uploading file will be transliterated by global transliteration rules
 *
 * Sources:
 * https://www.php.net/manual/de/function.image-type-to-extension.php
