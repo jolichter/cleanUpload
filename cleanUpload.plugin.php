@@ -1,11 +1,12 @@
 <?php
 /*
-* V 22.10.012
+* V 22.12.013
 *
-* cleanUpload is a MODX Revolution FileManager Plugin
-* Testet with MODX 2.3.1, 2.5.6, 2.8.3 (PHP 7.4.x) and 3.0.1 (PHP 8.1.x)
+* cleanUpload is a MODX Revolution FileManager Plugin for Pictures and PDF's
+* Testet with MODX 2.8.4 (PHP 7.4.x) and 3.0.2 (PHP 8.1.x)
 *
-* File name transliteration and customizing the JPG image size (JPG file info will be removed)
+* File name transliteration and customizing the picture size
+* JPG and PDF Metadata will be removed!
 * Same file names are NOT overwritten! Instead, a uniq ID is appended to these files.
 * Two system events need to be enabled: Two system events must be activated: OnFileManagerBeforeUpload, OnFileManagerUpload
 *
@@ -135,7 +136,18 @@ case 'OnFileManagerUpload':
 
         // if file is a jpg-image
         if ($fileExtLow == '.jpg' || $fileExtLow == '.jpeg') {
-        imgResize($modx, $fullPathNameNew, $fullPathNameNew, $maxWidth, $maxHeight, $quality);
+           imgResize($modx, $fullPathNameNew, $fullPathNameNew, $maxWidth, $maxHeight, $quality);
         }
+
+        // if file is a PDF
+        if ($fileExtLow == '.pdf') {
+           // read the input PDF file
+           $inputPDF = file_get_contents($fullPathNameNew);
+           // remove PDF metadata
+           $outputPDF = preg_replace('/\/Info\s\d+\s\d+\sR/s', '/Info 0 R', $inputPDF);
+           // write the output PDF file
+           file_put_contents($fullPathNameNew, $outputPDF);
+        }
+
 break;
 } } }
