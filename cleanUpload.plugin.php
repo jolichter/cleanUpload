@@ -1,62 +1,90 @@
 <?php
 /*
-* V 22.12.013
+* V 22.12.014
 *
-* cleanUpload is a MODX Revolution FileManager Plugin for Pictures and PDF's
+* cleanUpload is a MODX Revolution FileManager Plugin when uploading with Media Browser
+* Clean up and optimize data, JPEG and PDF Metadata will be removed, GDPR compliant (DSGVO Konform)
+*
 * Testet with MODX 2.8.4 (PHP 7.4.x) and 3.0.2 (PHP 8.1.x)
-*
 * File name transliteration and customizing the picture size
-* JPG and PDF Metadata will be removed!
-* Same file names are NOT overwritten! Instead, a uniq ID is appended to these files.
-* Two system events need to be enabled: Two system events must be activated: OnFileManagerBeforeUpload, OnFileManagerUpload
+* Same file names are NOT overwritten, instead a uniq ID is appended to these files
+* Two system events need to be enabled: OnFileManagerBeforeUpload, OnFileManagerUpload
 *
-* Since MODX 3: Transliterate (upload_translit) must be disabled in the settings for this (cleanUpload uses its own!).
+* Since MODX 3: Transliterate (upload_translit) must be disabled in the settings for this (cleanUpload uses its own).
 *  - Transliterate names of uploading files
 *  - Type: Yes/No (default: Yes)
 *  - if 'Yes' name of any uploading file will be transliterated by global transliteration rules
 *
-* Sources:
+* Reference and inspiration:
 * https://www.php.net/manual/de/function.image-type-to-extension.php
 * https://forums.modx.com/?action=thread&thread=73940&page=2
 */
 
-// Parameter
-$maxWidth = 1280;    // maximum pixel width | maximale Pixelbreite
+// Settings
+$maxWidth = 1280;    // Maximum pixel width | maximale Pixelbreite
 $maxHeight = 1280;   // Maximum pixel height | maximale Pixelhöhe
-$quality = 80;       // JPG quality in % (default 80) | JPG Qualität in % (Vorgabe 80)
+$quality = 80;       // JPEG quality in % (default 80) | JPEG Qualität in % (Vorgabe 80)
+$slug ='_';          // Replacement character | Ersetzungszeichen
 
-
+global $modx;
 $eventName = $modx->event->name;
 
 // ###################################
-// cleaning filename function
+// Cleaning filename function
 if (!function_exists('cleanFilename')) {
    function cleanFilename($modx, $filename, $slug) {
-   // trim, lowercase, replace special chars, transliterate
-   if (function_exists('iconv')) {
-   setlocale(LC_ALL, strtolower($modx->getOption('cultureKey')) . '_' . strtoupper($modx->getOption('cultureKey')));
-   $filename = strtolower(trim(preg_replace('~[^0-9a-z-' . preg_quote(null, '~') . ']+~i', $slug, iconv('UTF-8', 'ASCII//TRANSLIT', $filename)), $slug));
-   } else {
-   // without transliterate
-   $filename = strtolower(trim(preg_replace('~[^0-9a-z-' . preg_quote(null, '~') . ']+~i', $slug, $filename), $slug));
-   }
-   if (empty($filename)) {return 'noname';}
-   return $filename;
+   // trim, replace special chars, transliterate
+
+   // Replace German Umlaute (no problem if use meta charset="UTF-8")
+   # $filename = str_replace(array('ä', 'ö', 'ü', 'Ä', 'Ö', 'Ü', 'ß'), array('ae', 'oe', 'ue', 'Ae', 'Oe', 'Ue', 'ss'), $filename);
+
+   // Trying to use iconv (I've disabled this because I want to have German Umlaute)
+   # if (function_exists('iconv')) {
+      # setlocale(LC_ALL, strtolower($modx->getOption('cultureKey')) . '_' . strtoupper($modx->getOption('cultureKey')));
+      # $filename = trim(preg_replace('~[^a-zA-Z0-9-' . preg_quote(null, '~') . ']+~i', $slug, iconv('UTF-8', 'ASCII//TRANSLIT', $filename)), $slug);
+   # } else {
+      // Without transliterate (If you don't want to have Umlaute, remove: äöüÄÖÜß)
+      $filename = trim(preg_replace('~[^a-zA-Z0-9äöüÄÖÜß-' . preg_quote(null, '~') . ']+~i', $slug, $filename), $slug);
+   # }
+   if (empty($filename)) {return false;}
+	  return $filename;
    }
 }
 
 
 // ###################################
-// resize JPEG function
+// Resize JPEG function
 if (!function_exists('imgResize')) {
    function imgResize($modx, $source, $target, $maxWidth, $maxHeight, $quality) {
-    // check if GD extension is loaded
-    if (!extension_loaded('gd') && !extension_loaded('gd2')) {return false;}
+
+    // Checks if GD extension is loaded
+    if (!extension_loaded('gd') && !extension_loaded('gd2')) {
+	$modx->log(modX::LOG_LEVEL_ERROR, '[cleanUpload] Error: GD extension not loaded');
+	return false;
+    }
+
     list($source_width, $source_height, $source_type) = getimagesize($source);
     $source_gd_image = '';
     switch ($source_type) {
         case IMAGETYPE_JPEG:
             $source_gd_image = imagecreatefromjpeg($source);
+            
+			// Rotate image, if info available, because metadata will be removed
+			$exif = exif_read_data($source);
+			if (isset($exif['Orientation'])) {
+				switch ($exif['Orientation']) {
+				case 3:
+					$source_gd_image = imagerotate($source_gd_image, 180, 0);
+					break;
+				case 6:
+					$source_gd_image = imagerotate($source_gd_image, -90, 0);
+					break;
+				case 8:
+					$source_gd_image = imagerotate($source_gd_image, 90, 0);
+					break;
+				}
+			}
+			
             break;
         case IMAGETYPE_GIF:
             $source_gd_image = imagecreatefromgif($source);
@@ -65,6 +93,7 @@ if (!function_exists('imgResize')) {
             $source_gd_image = imagecreatefrompng($source);
             break;
     }
+
     if ($source_gd_image === false) {return false;}
     $source_aspect_ratio = $source_width / $source_height;
     $aspect_ratio = $maxWidth / $maxHeight;
@@ -78,24 +107,29 @@ if (!function_exists('imgResize')) {
         $image_width = $maxWidth;
         $image_height = (int) ($maxWidth / $source_aspect_ratio);
     }
-    // create a new temporary image
+
+    // Create a new temporary image
     $gd_image = imagecreatetruecolor($image_width, $image_height);
-    // copy and resize old image into new image
+    // Copy and resize old image into new image
     imagecopyresampled($gd_image, $source_gd_image, 0, 0, 0, 0, $image_width, $image_height, $source_width, $source_height);
-    // save gd_image into a file
+    // Save gd_image into a file
     imagejpeg($gd_image, $target, $quality);
-    // release the memory
+    // Destroy the images to free up memory
     imagedestroy($source_gd_image);
     imagedestroy($gd_image);
     }
 }
 
 // ###################################
-// resize Images if necessary
+// Resize images if necessary
 foreach($files as $file) {
-    global $modx;
-    if ($file['error'] == 0) {
-        $slug = '_';
+
+    // Checks if an error occurred while uploading the file
+    if ($file['error'] != 0) {
+       $modx->log(modX::LOG_LEVEL_ERROR, '[cleanUpload] Error: '.$file);
+       return false;
+    }
+
         $dir = $directory;
         $fileDir = $directory.$file['name'];                                 # Directory + Filename.ext
         $bases = $source->getBases($directory);                              # Array
@@ -112,42 +146,42 @@ foreach($files as $file) {
 
 switch($eventName) {
 
-case 'OnFileManagerBeforeUpload':
-            // if the file exist, add an unique-ID Number in file
+   case 'OnFileManagerBeforeUpload':
+            // If the file exist, add an unique-ID Number in file
             if (file_exists($fullPathNameNew)) {
                $uni = uniqid();
                $fileTemp= $fileNameNew.'_'.$uni;
                $fileTemp = $fileTemp.$fileExtLow;
                $source->renameObject($dir.$fullNameNewLow, $fileTemp);
             }
-break;
+   break;
 
-case 'OnFileManagerUpload':
+   case 'OnFileManagerUpload':
             // Transliteration necessary?
             if ($fileName != $fileNameNew) {
                 $source->renameObject($fileDir, $fullNameNewLow);
-            }
+				}
             else {
-            // or is only the extension to lower necessary?
+            // Or is only the extension to lower necessary?
             if ($fileExt != $fileExtLow) {
                 $source->renameObject($fileDir, $fullNameNewLow);
-            }
+				}
             }
 
-        // if file is a jpg-image
+        // If file is a JPEG-Picture
         if ($fileExtLow == '.jpg' || $fileExtLow == '.jpeg') {
            imgResize($modx, $fullPathNameNew, $fullPathNameNew, $maxWidth, $maxHeight, $quality);
         }
 
-        // if file is a PDF
+        // If file is a PDF
         if ($fileExtLow == '.pdf') {
-           // read the input PDF file
+           // Read the input PDF file
            $inputPDF = file_get_contents($fullPathNameNew);
-           // remove PDF metadata
+           // Remove PDF metadata
            $outputPDF = preg_replace('/\/Info\s\d+\s\d+\sR/s', '/Info 0 R', $inputPDF);
-           // write the output PDF file
+           // Write the output PDF file
            file_put_contents($fullPathNameNew, $outputPDF);
         }
 
-break;
-} } }
+   break;
+} }
