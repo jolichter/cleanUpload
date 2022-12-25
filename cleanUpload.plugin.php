@@ -1,6 +1,6 @@
 <?php
 /*
-* V 22.12.014
+* V 22.12.015
 *
 * cleanUpload is a MODX Revolution FileManager Plugin when uploading with Media Browser
 * Clean up and optimize data, JPEG and PDF Metadata will be removed, GDPR compliant (DSGVO Konform)
@@ -21,13 +21,19 @@
 */
 
 // Settings
-$maxWidth = 1280;    // Maximum pixel width | maximale Pixelbreite
-$maxHeight = 1280;   // Maximum pixel height | maximale Pixelhöhe
+$maxWidth = 1280;    // Maximum pixel width | Maximale Pixelbreite
+$maxHeight = 1280;   // Maximum pixel height | Maximale Pixelhöhe
 $quality = 80;       // JPEG quality in % (default 80) | JPEG Qualität in % (Vorgabe 80)
 $slug ='_';          // Replacement character | Ersetzungszeichen
 
 global $modx;
 $eventName = $modx->event->name;
+
+// Checks if GD extension is loaded
+   if (!extension_loaded('gd') && !extension_loaded('gd2')) {
+      $modx->log(modX::LOG_LEVEL_ERROR, '[cleanUpload] Error: GD extension not loaded');
+      return false;
+   }
 
 // ###################################
 // Cleaning filename function
@@ -57,34 +63,31 @@ if (!function_exists('cleanFilename')) {
 if (!function_exists('imgResize')) {
    function imgResize($modx, $source, $target, $maxWidth, $maxHeight, $quality) {
 
-    // Checks if GD extension is loaded
-    if (!extension_loaded('gd') && !extension_loaded('gd2')) {
-	$modx->log(modX::LOG_LEVEL_ERROR, '[cleanUpload] Error: GD extension not loaded');
-	return false;
-    }
-
     list($source_width, $source_height, $source_type) = getimagesize($source);
     $source_gd_image = '';
     switch ($source_type) {
         case IMAGETYPE_JPEG:
             $source_gd_image = imagecreatefromjpeg($source);
-            
-			// Rotate image, if info available, because metadata will be removed
-			$exif = exif_read_data($source);
-			if (isset($exif['Orientation'])) {
-				switch ($exif['Orientation']) {
-				case 3:
-					$source_gd_image = imagerotate($source_gd_image, 180, 0);
-					break;
-				case 6:
-					$source_gd_image = imagerotate($source_gd_image, -90, 0);
-					break;
-				case 8:
-					$source_gd_image = imagerotate($source_gd_image, 90, 0);
-					break;
-				}
-			}
-			
+
+            // Rotate image, if info available, because metadata will be removed
+            $exif = exif_read_data($source);
+                   if ($exif === false) {
+                       // No EXIF-Metadata
+                   } else {
+                        if (isset($exif['Orientation'])) {
+                        switch ($exif['Orientation']) {
+                          case 3:
+                              $source_gd_image = imagerotate($source_gd_image, 180, 0);
+                              break;
+                          case 6:
+                              $source_gd_image = imagerotate($source_gd_image, -90, 0);
+                              break;
+                          case 8:
+                              $source_gd_image = imagerotate($source_gd_image, 90, 0);
+                              break;
+                              }
+                        }
+                   }
             break;
         case IMAGETYPE_GIF:
             $source_gd_image = imagecreatefromgif($source);
@@ -160,13 +163,13 @@ switch($eventName) {
             // Transliteration necessary?
             if ($fileName != $fileNameNew) {
                 $source->renameObject($fileDir, $fullNameNewLow);
-				}
-            else {
-            // Or is only the extension to lower necessary?
-            if ($fileExt != $fileExtLow) {
-                $source->renameObject($fileDir, $fullNameNewLow);
-				}
             }
+            else {
+                  // Or is only the extension to lower necessary?
+                  if ($fileExt != $fileExtLow) {
+                      $source->renameObject($fileDir, $fullNameNewLow);
+                  }
+           }
 
         // If file is a JPEG-Picture
         if ($fileExtLow == '.jpg' || $fileExtLow == '.jpeg') {
