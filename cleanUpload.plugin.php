@@ -1,6 +1,6 @@
 <?php
 /*
-* V 22.12.015
+* V 22.12.016
 *
 * cleanUpload is a MODX Revolution FileManager Plugin when uploading with Media Browser
 * Clean up and optimize data, JPEG and PDF Metadata will be removed, GDPR compliant (DSGVO Konform)
@@ -74,18 +74,20 @@ if (!function_exists('imgResize')) {
                    if ($exif === false) {
                        // No EXIF-Metadata
                    } else {
-                        if (isset($exif['Orientation'])) {
-                        switch ($exif['Orientation']) {
-                          case 3:
-                              $source_gd_image = imagerotate($source_gd_image, 180, 0);
-                              break;
-                          case 6:
-                              $source_gd_image = imagerotate($source_gd_image, -90, 0);
-                              break;
-                          case 8:
-                              $source_gd_image = imagerotate($source_gd_image, 90, 0);
-                              break;
-                              }
+                       // Check if the value of the Orientation variable would really rotate the image
+                        if ($exif && isset($exif['Orientation']) && $exif['Orientation'] !== 1) {
+                             // Rotate image
+                            switch ($exif['Orientation']) {
+                              case 3:
+                                  $source_gd_image = imagerotate($source_gd_image, 180, 0);
+                                  break;
+                              case 6:
+                                  $source_gd_image = imagerotate($source_gd_image, -90, 0);
+                                  break;
+                              case 8:
+                                  $source_gd_image = imagerotate($source_gd_image, 90, 0);
+                                  break;
+                            }
                         }
                    }
             break;
