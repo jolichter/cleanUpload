@@ -1,6 +1,6 @@
 <?php
 /*
-* V 22.12.016
+* V 23.01.017
 *
 * cleanUpload is a MODX Revolution FileManager Plugin when uploading with Media Browser
 * Clean up and optimize data, JPEG and PDF Metadata will be removed, GDPR compliant (DSGVO Konform)
@@ -88,6 +88,8 @@ if (!function_exists('imgResize')) {
                                   $source_gd_image = imagerotate($source_gd_image, 90, 0);
                                   break;
                             }
+                            $source_width = imagesx($source_gd_image);
+                            $source_height = imagesy($source_gd_image);
                         }
                    }
             break;
@@ -100,6 +102,7 @@ if (!function_exists('imgResize')) {
     }
 
     if ($source_gd_image === false) {return false;}
+
     $source_aspect_ratio = $source_width / $source_height;
     $aspect_ratio = $maxWidth / $maxHeight;
     if ($source_width <= $maxWidth && $source_height <= $maxHeight) {
