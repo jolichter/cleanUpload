@@ -1,5 +1,5 @@
 # cleanUpload is a MODX Revolution FileManager Plugin
-- Testet with MODX 2.8.4 (PHP 7.4.x) and 3.0.2 (PHP 8.1.x)
+- Testet with MODX 2.8.5 (PHP 7.4.x) and 3.0.3 (PHP 8.1.x)
 - Two system events must be activated: OnFileManagerBeforeUpload, OnFileManagerUpload
 
 Features:
