@@ -1,11 +1,11 @@
 <?php
 /*
-* V 23.01.017
+* V 23.07.018
 *
 * cleanUpload is a MODX Revolution FileManager Plugin when uploading with Media Browser
 * Clean up and optimize data, JPEG and PDF Metadata will be removed, GDPR compliant (DSGVO Konform)
 *
-* Testet with MODX 2.8.4 (PHP 7.4.x) and 3.0.2 (PHP 8.1.x)
+* Testet with MODX 2.8.5 (PHP 7.4.x) and 3.0.3 (PHP 8.1.x)
 * File name transliteration and customizing the picture size
 * Same file names are NOT overwritten, instead a uniq ID is appended to these files
 * Two system events need to be enabled: OnFileManagerBeforeUpload, OnFileManagerUpload
@@ -181,15 +181,49 @@ switch($eventName) {
            imgResize($modx, $fullPathNameNew, $fullPathNameNew, $maxWidth, $maxHeight, $quality);
         }
 
-        // If file is a PDF
-        if ($fileExtLow == '.pdf') {
-           // Read the input PDF file
-           $inputPDF = file_get_contents($fullPathNameNew);
-           // Remove PDF metadata
-           $outputPDF = preg_replace('/\/Info\s\d+\s\d+\sR/s', '/Info 0 R', $inputPDF);
-           // Write the output PDF file
-           file_put_contents($fullPathNameNew, $outputPDF);
-        }
+
+       // This code checks if Ghostscript is installed and then converts a PDF file to PostScript and then back to PDF to remove the metadata.
+       // The resulting PDF file is optimized with the -dPDFSETTINGS=/ebook option to reduce the file size.
+
+       // Check if shell_exec is enabled
+       if (!function_exists('shell_exec')) {
+           $modx->log(modX::LOG_LEVEL_ERROR, '[cleanUpload] Error: shell_exec function is not enabled -> PDF metadata cannot remove!');
+           return false;
+       }
+
+       // Check if Ghostscript is installed
+       $gsVersion = shell_exec('gs -v');
+
+       if (!$gsVersion) {
+           // Log error with MODX
+           $modx->log(modX::LOG_LEVEL_ERROR, '[cleanUpload] Error: Ghostscript is not installed -> PDF metadata cannot remove!');
+           return false;
+       }
+
+       // If file is a PDF
+       if ($fileExtLow == '.pdf') {
+           // Path to the input PDF file
+           $inputPDF = $fullPathNameNew;
+
+           // Temporary path for the output PDF file
+           $outputPDF = $fullPathNameNew . '.tmp';
+           $tempPS = $fullPathNameNew . '.ps';
+
+           // Command to convert PDF to PostScript and then back to PDF
+           $command1 = "pdf2ps $inputPDF $tempPS";
+           $command2 = "ps2pdf -dPDFSETTINGS=/ebook $tempPS $outputPDF";
+
+           // Execute commands
+           exec($command1);
+           exec($command2);
+
+           // Replace the original file with the new file
+           rename($outputPDF, $inputPDF);
+
+           // Remove temporary PostScript file
+           unlink($tempPS);
+       }
+
 
    break;
 } }
