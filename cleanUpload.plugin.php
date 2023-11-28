@@ -1,11 +1,11 @@
 <?php
 /*
-* V 23.07.018
+* V 23.11.019
 *
 * cleanUpload is a MODX Revolution FileManager Plugin when uploading with Media Browser
 * Clean up and optimize data, JPEG and PDF Metadata will be removed, GDPR compliant (DSGVO Konform)
 *
-* Testet with MODX 2.8.5 (PHP 7.4.x) and 3.0.3 (PHP 8.1.x)
+* Testet with MODX 2.8.5 (PHP 7.4.x) and 3.0.4 (PHP 8.1.x)
 * File name transliteration and customizing the picture size
 * Same file names are NOT overwritten, instead a uniq ID is appended to these files
 * Two system events need to be enabled: OnFileManagerBeforeUpload, OnFileManagerUpload
@@ -211,7 +211,8 @@ switch($eventName) {
 
            // Command to convert PDF to PostScript and then back to PDF
            $command1 = "pdf2ps $inputPDF $tempPS";
-           $command2 = "ps2pdf -dPDFSETTINGS=/ebook $tempPS $outputPDF";
+           $command2 = "ps2pdf -dPDFSETTINGS=/prepress $tempPS $outputPDF";
+           // The options '/screen', '/ebook', '/prepress', and '/printer' are settings for ps2pdf that control the quality and type of compression of PDF files.
 
            // Execute commands
            exec($command1);
