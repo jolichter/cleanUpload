@@ -1,6 +1,6 @@
 <?php
 /*
-* V 25.01.021 - Optimiert
+* V 25.01.022 - Optimiert
 *
 * cleanUpload is a MODX Revolution FileManager Plugin when uploading with Media Browser
 * Clean up and optimize data, JPEG and PDF Metadata will be removed, GDPR compliant (DSGVO Konform)
@@ -21,8 +21,12 @@
 */
 
 // Einstellungen für die PDF-Verarbeitung
-define('PDF_PROCESSING_WAIT', 5); // Maximale Wartezeit (Sekunden)
-define('PDF_PROCESSING_ATTEMPTS', 3); // Maximale Versuche für PDF-Verarbeitung
+if (!defined('PDF_PROCESSING_WAIT')) {
+    define('PDF_PROCESSING_WAIT', 5); // Maximale Wartezeit (Sekunden)
+}
+if (!defined('PDF_PROCESSING_ATTEMPTS')) {
+    define('PDF_PROCESSING_ATTEMPTS', 3); // Maximale Versuche für PDF-Verarbeitung
+}
 
 // Settings
 $maxWidth = 1280;    // Maximum pixel width | Maximale Pixelbreite
